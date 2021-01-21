@@ -21,8 +21,8 @@
     },
 
     props: {
-      model: Object,
-      rules: Object,
+      model: Object, // 表单数据
+      rules: Object, // 表单验证规则
       labelPosition: String,
       labelWidth: String,
       labelSuffix: {
@@ -50,11 +50,13 @@
     watch: {
       rules() {
         // remove then add event listeners on form-item after form rules change
+        // 重新添加验证事件
         this.fields.forEach(field => {
           field.removeValidateEvents();
           field.addValidateEvents();
         });
 
+        // validateOnRuleChange默认为true，即校验规则改变会实时校验表单
         if (this.validateOnRuleChange) {
           this.validate(() => {});
         }
@@ -74,12 +76,14 @@
       };
     },
     created() {
+      // 添加需要校验的el-form-item
       this.$on('el.form.addField', (field) => {
         if (field) {
           this.fields.push(field);
         }
       });
       /* istanbul ignore next */
+      // 从校验列表中移除el-form-item
       this.$on('el.form.removeField', (field) => {
         if (field.prop) {
           this.fields.splice(this.fields.indexOf(field), 1);
@@ -87,6 +91,7 @@
       });
     },
     methods: {
+      // 重置表单
       resetFields() {
         if (!this.model) {
           console.warn('[Element Warn][Form]model is required for resetFields to work.');
@@ -96,6 +101,7 @@
           field.resetField();
         });
       },
+      // 清空(对应props的或者所有)校验列表
       clearValidate(props = []) {
         const fields = props.length
           ? (typeof props === 'string'
@@ -106,7 +112,8 @@
           field.clearValidate();
         });
       },
-      validate(callback) {
+      // 表单校验方法
+      validate(callback) { // callback一般为(valid) => { ...todos }
         if (!this.model) {
           console.warn('[Element Warn][Form]model is required for validate to work!');
           return;
@@ -114,6 +121,7 @@
 
         let promise;
         // if no callback, return promise
+        // 没有传入callback，就返回一个promise
         if (typeof callback !== 'function' && window.Promise) {
           promise = new window.Promise((resolve, reject) => {
             callback = function(valid) {
@@ -128,13 +136,24 @@
         if (this.fields.length === 0 && callback) {
           callback(true);
         }
-        let invalidFields = {};
+        // invalidFields = {
+        //   name1: [
+        //     { message: '请输入活动名称1', field: 'name1' }
+        //   ],
+        //   name2: [
+        //     { message: '请输入活动名称2', field: 'name2' }
+        //   ]
+        // }
+        let invalidFields = {}; // 未通过校验的数据对象
         this.fields.forEach(field => {
           field.validate('', (message, field) => {
+            // 只要有一个field不满足，就返回false的valid
             if (message) {
               valid = false;
             }
+            // 未通过校验的数据对象
             invalidFields = objectAssign({}, invalidFields, field);
+            // 遍历fields完毕，执行callback回调
             if (typeof callback === 'function' && ++count === this.fields.length) {
               callback(valid, invalidFields);
             }
@@ -145,6 +164,7 @@
           return promise;
         }
       },
+      // 校验对应的props
       validateField(props, cb) {
         props = [].concat(props);
         const fields = this.fields.filter(field => props.indexOf(field.prop) !== -1);

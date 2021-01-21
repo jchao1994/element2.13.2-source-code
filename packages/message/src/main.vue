@@ -73,11 +73,13 @@
     },
 
     methods: {
+      // 销毁并移除dom
       handleAfterLeave() {
         this.$destroy(true);
         this.$el.parentNode.removeChild(this.$el);
       },
 
+      // 关闭message组件，调用onClose关闭回调
       close() {
         this.closed = true;
         if (typeof this.onClose === 'function') {

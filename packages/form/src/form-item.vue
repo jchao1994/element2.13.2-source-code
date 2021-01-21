@@ -9,6 +9,7 @@
     },
     sizeClass ? 'el-form-item--' + sizeClass : ''
   ]">
+    <!-- label区域 -->
     <label-wrap
       :is-auto-width="labelStyle && labelStyle.width === 'auto'"
       :update-all="form.labelWidth === 'auto'">
@@ -17,7 +18,9 @@
       </label>
     </label-wrap>
     <div class="el-form-item__content" :style="contentStyle">
+      <!-- 默认插槽 -->
       <slot></slot>
+      <!-- 错误信息提示区域 -->
       <transition name="el-zoom-in-top">
         <slot
           v-if="validateState === 'error' && showMessage && form.showMessage"
@@ -57,13 +60,13 @@
       };
     },
 
-    inject: ['elForm'],
+    inject: ['elForm'], // 接收整个el-form组件
 
     props: {
-      label: String,
+      label: String, // 单个label
       labelWidth: String,
-      prop: String,
-      required: {
+      prop: String, // 单个数据的key
+      required: { // 可以直接传入required设置规则，也可以在rules中设置required规则
         type: Boolean,
         default: undefined
       },
@@ -127,6 +130,7 @@
         }
         return ret;
       },
+      // 最近的el-form标签
       form() {
         let parent = this.$parent;
         let parentName = parent.$options.componentName;
@@ -139,6 +143,7 @@
         }
         return parent;
       },
+      // el-form中的表单数据model中的初始值
       fieldValue() {
         const model = this.form.model;
         if (!model || !this.prop) { return; }
@@ -158,7 +163,7 @@
           rules.every(rule => {
             if (rule.required) {
               isRequired = true;
-              return false;
+              return false; // 跳出every函数的遍历
             }
             return true;
           });
@@ -188,6 +193,7 @@
     methods: {
       validate(trigger, callback = noop) {
         this.validateDisabled = false;
+        // 提取和这个trigger有关的所有rules
         const rules = this.getFilteredRule(trigger);
         if ((!rules || rules.length === 0) && this.required === undefined) {
           callback();
@@ -197,6 +203,7 @@
         this.validateState = 'validating';
 
         const descriptor = {};
+        // 移除rules中的trigger属性
         if (rules && rules.length > 0) {
           rules.forEach(rule => {
             delete rule.trigger;
@@ -204,24 +211,30 @@
         }
         descriptor[this.prop] = rules;
 
+        // 使用async-validator库进行校验 https://github.com/yiminghe/async-validator
         const validator = new AsyncValidator(descriptor);
         const model = {};
 
-        model[this.prop] = this.fieldValue;
-
+        model[this.prop] = this.fieldValue; // 初始值
+        
+        // errors是校验不通过的错误信息数组
+        // invalidFields是未通过校验的数据对象
         validator.validate(model, { firstFields: true }, (errors, invalidFields) => {
           this.validateState = !errors ? 'success' : 'error';
           this.validateMessage = errors ? errors[0].message : '';
 
           callback(this.validateMessage, invalidFields);
+          // 触发el-form上传入的validate方法，一般不传
           this.elForm && this.elForm.$emit('validate', this.prop, !errors, this.validateMessage || null);
         });
       },
+      // 清空校验
       clearValidate() {
         this.validateState = '';
         this.validateMessage = '';
         this.validateDisabled = false;
       },
+      // 重置单个表单项
       resetField() {
         this.validateState = '';
         this.validateMessage = '';
@@ -249,18 +262,20 @@
 
         this.broadcast('ElTimeSelect', 'fieldReset', this.initialValue);
       },
+      // 获取this.prop对应的rule数组
       getRules() {
-        let formRules = this.form.rules;
-        const selfRules = this.rules;
-        const requiredRule = this.required !== undefined ? { required: !!this.required } : [];
+        let formRules = this.form.rules; // el-form的rules
+        const selfRules = this.rules; // el-form-item的rules
+        const requiredRule = this.required !== undefined ? { required: !!this.required } : []; // 直接给el-form-item传的required prop，没有传的话会根据校验规则生成
 
-        const prop = getPropByPath(formRules, this.prop || '');
-        formRules = formRules ? (prop.o[this.prop || ''] || prop.v) : [];
+        const prop = getPropByPath(formRules, this.prop || ''); // { o: formRules, k: this.prop, v: formRules[this.prop]}
+        formRules = formRules ? (prop.o[this.prop || ''] || prop.v) : []; // this.prop对应的rule数组
 
         return [].concat(selfRules || formRules || []).concat(requiredRule);
       },
+      // 获取this.prop对应的 包含trigger的 rule数组
       getFilteredRule(trigger) {
-        const rules = this.getRules();
+        const rules = this.getRules(); // this.prop对应的rule数组
 
         return rules.filter(rule => {
           if (!rule.trigger || trigger === '') return true;
@@ -285,6 +300,7 @@
       updateComputedLabelWidth(width) {
         this.computedLabelWidth = width ? `${width}px` : '';
       },
+      // 添加监听事件进行数据验证
       addValidateEvents() {
         const rules = this.getRules();
 
@@ -293,11 +309,14 @@
           this.$on('el.form.change', this.onFieldChange);
         }
       },
+      // 移除所有的$on事件
       removeValidateEvents() {
         this.$off();
       }
     },
     mounted() {
+      // 添加el-form-item到校验列表fields中
+      // el-form-item有prop才视为需要校验
       if (this.prop) {
         this.dispatch('ElForm', 'el.form.addField', [this]);
 
@@ -312,6 +331,7 @@
         this.addValidateEvents();
       }
     },
+    // 从校验列表fields中移除el-form-item
     beforeDestroy() {
       this.dispatch('ElForm', 'el.form.removeField', [this]);
     }

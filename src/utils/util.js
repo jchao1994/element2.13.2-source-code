@@ -44,6 +44,7 @@ export const getValueByPath = function(object, prop) {
   return result;
 };
 
+// { o: obj, k: this.prop, v: obj[this.prop]}
 export function getPropByPath(obj, path, strict) {
   let tempObj = obj;
   path = path.replace(/\[(\w+)\]/g, '.$1');
