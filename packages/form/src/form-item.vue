@@ -194,6 +194,7 @@
       validate(trigger, callback = noop) {
         this.validateDisabled = false;
         // 提取和这个trigger有关的所有rules
+        // trigger为空字符串''，表示校验所有rules
         const rules = this.getFilteredRule(trigger);
         if ((!rules || rules.length === 0) && this.required === undefined) {
           callback();

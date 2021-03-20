@@ -166,10 +166,12 @@ const components = [
   CollapseTransition
 ];
 
+// 完整引入 Vue.use(ElementUI) 执行的install方法
 const install = function(Vue, opts = {}) {
   locale.use(opts.locale);
   locale.i18n(opts.i18n);
 
+  // components中的每个组件都有自己的install方法，用于按需引入
   components.forEach(component => {
     Vue.component(component.name, component);
   });
